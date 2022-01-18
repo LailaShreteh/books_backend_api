@@ -4,7 +4,8 @@ import BooksCtrl from "./books.controller"
 const router = new Router()
 
 /* **GET /books/** - Returns a list of books in the database in JSON format**/
-router.route('/').get(BooksCtrl.paginatedResults)
+//router.route('/').get(BooksCtrl.paginatedResults)
+router.route('/').get(BooksCtrl.apiGetBooksWithAuthors)
 /* **GET /book/{{id}}/** - Returns a detail view of the specified book id. Nest author
     details in JSON format**/
 router.route('/:book_isbn').get(BooksCtrl.apiGetBooksById)

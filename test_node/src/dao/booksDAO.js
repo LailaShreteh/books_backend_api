@@ -76,10 +76,10 @@ export default class booksDAO {
     }
     try {
       const booksList = await displayCursor.toArray();
+
       const totalNumBooks = page === 0 ? await books.countDocuments() : 0;
       const estimate = await books.estimatedDocumentCount();
       // console.log(`Estimated number of documents in the movies collection: ${estimate}`);
-
       return { booksList, totalNumBooks: estimate };
     } catch (e) {
       console.error(
@@ -89,29 +89,178 @@ export default class booksDAO {
     }
   }
   // manual refrance !
-  static async getNestedDocsByID(ids) {
-    let cursor;
+  static async getNestedDocsByID() {
+    let cursor
     try {
-      cursor = await authors.find(
-        { _id: { $in: ids } },
-        { projection: { _id: 0, first_name: 1, last_name: 1 } }
-      );
+      // Implement the required pipeline.
+      const pipeline = [
+        {
+            $unwind: {
+                path: '$author_id'
+            }
+        },
+        {
+            $lookup: {
+                from: 'Authors',
+                localField: 'author_id',
+                foreignField: '_id',
+                as: 'author_id'
+            }
+        },
+         {
+            $unwind: {
+                path: '$author_id'
+            }
+        },
+         {
+            $group: {
+                _id: '$_id',
+                authors_: {
+                    $push: '$author_id'
+                }
+            }
+        },
+         {
+            $lookup: {
+                from: 'Books',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'authors_details'
+            }
+        },
+        {
+            $unwind: {
+                path: '$authors_details'
+            }
+        },
+        {
+            $addFields: {
+                'authors_details.author_id': '$authors_'
+            }
+        },
+        {
+            $replaceRoot: {
+                newRoot: '$authors_details'
+            }
+        }
+    ]
+      const totalNumBooks = 0 === 0 ? await books.countDocuments() : 0;
+
+      cursor = await books.aggregate(pipeline)
+      const booksList = await cursor.toArray()
+      return {booksList,total:totalNumBooks}
     } catch (e) {
       /**
-            Ticket: Error Handling
+      Ticket: Error Handling
 
-            Handle the error that occurs when an invalid ID is passed to this method.
-            When this specific error is thrown, the method should return `null`.
-            */
+      Handle the error that occurs when an invalid ID is passed to this method.
+      When this specific error is thrown, the method should return `null`.
+      */
 
       // TODO Ticket: Error Handling
       // Catch the InvalidId error by string matching, and then handle it.
-      console.error(`Something went wrong in getBookByID: ${e}`);
-      throw e;
+      console.error(`Something went wrong in getUserByID: ${e}`)
+      throw e
     }
-    return cursor.toArray();
   }
-
+    /*
+    let cursor;
+    console.log("lailaaaaaaaaaaaaaaaa");
+    try {
+      const pipeline_ = [
+        {
+          $lookup: {
+            from: "Authors",
+            let: { author_id_: "$author_id" },
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $in: ["$$author_id_", ["61df89b2369b34382d13c23c"]],
+                  },
+                },
+              },
+            ],
+            as: "author_name_list",
+          },
+        }
+      ];
+      cursor = await books.aggregate([
+        {
+            $unwind: {
+                path: '$author_id'
+            }
+        },
+        {
+            $lookup: {
+                from: 'Authors',
+                localField: 'author_id._id',
+                foreignField: '_id',
+                as: 'author_id.author_obj'
+            }
+        },
+        {
+            $unwind: {
+                path: '$author_id.author_obj'
+            }
+        },
+        {
+            $group: {
+                _id: '$_id',
+                products: {
+                    $push: '$author_id'
+                }
+            }
+        },
+        {
+            $lookup: {
+                from: 'Books',
+                localField: '_id',
+                foreignField: '_id',
+                as: 'orderDetails'
+            }
+        },
+        {
+            $unwind: {
+                path: '$orderDetails'
+            }
+        },
+        {
+            $addFields: {
+                'orderDetails.author_id': '$author_id'
+            }
+        },
+        {
+            $replaceRoot: {
+                newRoot: '$orderDetails'
+            }
+        }
+    ])
+        /*[{
+        $lookup: {
+          from: "Authors", // other table name
+          localField: "author_id", // name of users table field
+          foreignField: "_id", // name of userinfo table field
+          as: "authors_name" // alias for userinfo table
+        }
+      },]) // $unwind used for getting data in object or for one record only);
+      */
+      // return cursor.toArray();
+    // } catch (e) {
+      // /**
+            // Ticket: Error Handling
+// 
+            // Handle the error that occurs when an invalid ID is passed to this method.
+            // When this specific error is thrown, the method should return `null`.
+            // */
+// 
+    //  TODO Ticket: Error Handling
+     // Catch the InvalidId error by string matching, and then handle it.
+      // console.error(`Something went wrong in getBookByID: ${e}`);
+      // throw e;
+    // }
+  // }
+// /
   static async getBooksByISBN(isbn) {
     /**
         Ticket: Projection

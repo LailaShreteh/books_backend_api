@@ -13,33 +13,39 @@ export class Book {
 }
 export default class BooksController {
   static async paginatedResults(req, res, next) {
-    const BOOKS_PER_PAGE = 10;
-    const page = parseInt(req.query.page);
-    const limit = parseInt(req.query.limit) == "" ? "" : BOOKS_PER_PAGE;
-    const skipIndex = (page - 1) * limit;
-    const results = {};
+    try {
+      const BOOKS_PER_PAGE = 10;
+      const page = parseInt(req.query.page);
+      const limit = parseInt(req.query.limit) == "" ? "" : BOOKS_PER_PAGE;
+      const skipIndex = (page - 1) * limit;
+      const results = {};
 
-    const { booksList, totalNumBooks } = await BooksDAO.getBooks(
-      null,
-      page,
-      limit
-    );
-    // // now get authorsNames
-    // let booksList = await booksList_.forEach(async (value) => {
-    //   let ids = value.author_id;
-    //   const authorsList =  await AuthorsDAO.getAuthorsByIds(ids);
-    //   value.author_id = authorsList;
-    //   console.log(value.author_id )
-    // })
-    
-    let response = {
-      books: booksList,
-      page: page,
-      filters: {},
-      entries_per_page: BOOKS_PER_PAGE,
-      total_results: totalNumBooks,
-    };
-    res.json(response);
+      let { booksList, totalNumBooks } = await BooksDAO.getBooks(
+        null,
+        page,
+        limit
+      );
+      // now get authorsNames
+      let response = {
+        books: booksList,
+        page: page,
+        filters: {},
+        entries_per_page: BOOKS_PER_PAGE,
+        total_results: totalNumBooks,
+      };
+      res.json(response);
+    } catch (e) {
+      res.status(500).json({ error: e });
+    }
+  }
+  static async apiGetBooksWithAuthors(req, res, next) {
+    try {
+      const { booksList, total } = await BooksDAO.getNestedDocsByID();
+      res.json({ booksList, total: total });
+    } catch (e) {
+      console.log(`api, ${e}`);
+      res.status(500).json({ error: e });
+    }
   }
 
   static async apiCreateBook(req, res) {
